@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'" />
+  <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+  <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin" />  <title>Desk Booking System</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <div>
+        <h1>Desk Booking</h1>
+        <p class="sub">Book a seat by choosing a date, selecting it on the map, and confirming your reservation.</p>
+      </div>
+      <div class="user-panel">
+        <div class="window" style="min-width:220px">
+          <div class="summary-label">Signed in as</div>
+          <div id="currentUserValue" class="summary-value">Loading...</div>
+        </div>
+        <div class="hint" id="userHint"></div>
+        <button id="logoutBtn" class="btn secondary" style="width:100%; margin-top:8px; padding:6px 10px; font-size:12px; cursor:pointer;" type="button">Logout</button>
+      </div>
+    </header>
+
+    <main class="main">
+      <section class="controls">
+        <div class="control">
+          <label class="label" for="dateInput">Booking Date</label>
+          <input id="dateInput" class="input" type="date" />
+          <div class="hint" id="dateHint"></div>
+        </div>
+
+        <div class="control">
+          <label class="label">Booking Window</label>
+          <div class="window">
+            <div>Opens: <b id="openTimeText">1:00 PM</b></div>
+            <div>Rule: <b>Next 5 weekdays</b> only, weekends ignored</div>
+          </div>
+        </div>
+
+        <div class="control">
+          <label class="label">Connection</label>
+          <div id="wsStatus" class="ws-status">Connecting…</div>
+        </div>
+
+        <div class="control">
+          <label class="label" for="zoneSelect">Select Zone</label>
+          <select id="zoneSelect" class="select">
+            <option value="">-- Choose a zone --</option>
+          </select>
+        </div>
+
+        <div class="control">
+          <div id="bookingSummary" class="window summary-panel" aria-live="polite"></div>
+        </div>
+
+        <div class="control actions">
+          <button id="bookBtn" class="btn" disabled>Book</button>
+          <button id="waitBtn" class="btn secondary" disabled style="display:none">Join Waiting List</button>
+          <button id="clearSelectionBtn" class="btn secondary" type="button">Clear Selection</button>
+        </div>
+
+        <div class="control actions">
+          <button id="wfhBtn" class="btn secondary" disabled>Work from Home</button>
+          <button id="checkinBtn" class="btn secondary" disabled>Check-in</button>
+          <button id="cancelBtn" class="btn danger" disabled>Cancel</button>
+        </div>
+
+        <div class="message" id="message" aria-live="polite"></div>
+      </section>
+
+      <section class="map" aria-label="Seat map">
+        <div class="legend" id="mapLegend"></div>
+
+        <div class="subsection-title">My Next 5 Days</div>
+        <div id="myNext5Days" class="next-days"></div>
+
+        <div class="subsection-title">Seat map</div>
+        <div class="map-display">
+          <div id="mapViewport" style="position: absolute; inset: 0; transform-origin: 0 0; transition: transform 0.5s cubic-bezier(0.25, 1, 0.5, 1);">
+            <div id="planPreview" class="plan-preview empty">
+              <span class="preview-label">Upload a floor plan and select a zone to show the interactive map.</span>
+              <img id="floorPlanPreview" alt="Floor plan preview" />
+            </div>
+            <div id="interactiveMap" class="interactive-map"></div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="admin-toggle">
+        <a id="adminLinkBtn" class="btn secondary" href="admin.html" style="margin-left:10px; display:inline-block; text-decoration:none">Open Admin Page</a>
+        <a id="userLoginLink" class="btn secondary" href="login.html" style="margin-left:10px; display:inline-block; text-decoration:none">User Login</a>
+      </div>
+
+      <div style="margin-top:6px">
+        Server backend with SQLite + WebSocket for real-time concurrency handling.
+      </div>
+      <div class="admin-note">
+        Admin access is handled on the dedicated admin page and is session-protected.
+      </div>
+    </footer>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
+

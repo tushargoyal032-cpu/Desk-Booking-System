@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'" />
+  <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+  <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin" />
+  <title>User Login - Desk Booking</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app" style="max-width:480px; margin:40px auto;">
+    <div class="controls">
+      <div class="header" style="display:block;">
+        <h1>User Login</h1>
+        <p class="sub">Sign in with your imported user credentials.</p>
+      </div>
+
+      <div class="control" style="margin-top:16px;">
+        <label class="label" for="userId">User ID</label>
+        <input id="userId" class="input" type="text" placeholder="Enter user ID" />
+      </div>
+
+      <div class="control">
+        <label class="label" for="userName">Full Name</label>
+        <input id="userName" class="input" type="text" placeholder="Enter full name" />
+      </div>
+
+      <div class="control actions">
+        <button id="loginBtn" class="btn" type="button">Sign In</button>
+        <a href="index.html" class="btn secondary" style="text-decoration:none; display:inline-block;">Go to Booking</a>
+      </div>
+
+      <div class="message" id="message" aria-live="polite"></div>
+      <div class="admin-note">Only imported users can sign in. Admins manage the onboarding list from the admin page.</div>
+    </div>
+  </div>
+
+  <script>
+    (() => {
+      const $ = (id) => document.getElementById(id);
+
+      function setMessage(text, kind) {
+        const el = $('message');
+        if (!el) return;
+        el.textContent = text || '';
+        el.classList.remove('ok', 'err');
+        if (kind) el.classList.add(kind);
+      }
+
+      async function apiCall(path, options = {}) {
+        const url = `${path}`;
+        const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
+        try {
+          const res = await fetch(url, { ...options, headers });
+          const body = await res.json().catch(() => ({ ok: false, message: 'Invalid response.' }));
+          if (!res.ok) throw new Error(body.message || `HTTP ${res.status}`);
+          return body;
+        } catch (err) {
+          throw new Error(err.message || 'Network error. Is the server running?');
+        }
+      }
+
+      async function login() {
+        const userId = ($('userId').value || '').trim();
+        const fullName = ($('userName').value || '').trim();
+        if (!userId || !fullName) {
+          setMessage('Please enter both your user ID and full name.', 'err');
+          return;
+        }
+
+        try {
+          const result = await apiCall('/api/login', {
+            method: 'POST',
+            body: JSON.stringify({ userId, fullName }),
+          });
+          localStorage.setItem('deskbook.token', result.token);
+          setMessage(`Welcome, ${result.user.name}.`, 'ok');
+          window.location.href = 'index.html';
+        } catch (err) {
+          setMessage(err.message, 'err');
+        }
+      }
+
+      $('loginBtn').addEventListener('click', login);
+      ['userId', 'userName'].forEach((id) => {
+        $(id).addEventListener('keydown', (event) => {
+          if (event.key === 'Enter') login();
+        });
+      });
+    })();
+  </script>
+</body>
+</html>

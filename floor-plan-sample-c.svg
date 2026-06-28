@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 600" width="900" height="600">
+  <defs>
+    <linearGradient id="bg3" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#08111f" />
+      <stop offset="100%" stop-color="#101b2f" />
+    </linearGradient>
+    <style>
+      .zone { fill-opacity:.2; stroke:#fff; stroke-width:3; }
+      .label { font:700 24px "Segoe UI", sans-serif; fill:#f5f6ff; }
+      .zone-a { fill:#4f8cff; }
+      .zone-b { fill:#6c5ce7; }
+      .zone-c { fill:#00b894; }
+      .zone-d { fill:#fdcb6e; }
+      .zone-e { fill:#ff7675; }
+      .icon { fill:#ffffffaa; }
+    </style>
+  </defs>
+  <rect width="900" height="600" rx="22" fill="url(#bg3)" />
+  <path d="M120 120 H780 V200 H120 Z" class="zone zone-a" />
+  <text x="450" y="162" text-anchor="middle" class="label">Zone A</text>
+  <path d="M120 220 H450 V320 H120 Z" class="zone zone-b" />
+  <text x="285" y="272" text-anchor="middle" class="label">Zone B</text>
+  <path d="M470 220 H780 V320 H470 Z" class="zone zone-c" />
+  <text x="625" y="272" text-anchor="middle" class="label">Zone C</text>
+  <path d="M120 340 H320 V520 H120 Z" class="zone zone-d" />
+  <text x="220" y="390" text-anchor="middle" class="label">Zone D</text>
+  <path d="M360 340 H780 V520 H360 Z" class="zone zone-e" />
+  <text x="570" y="390" text-anchor="middle" class="label">Zone E</text>
+  <g opacity=".35">
+    <circle cx="210" cy="145" r="24" class="icon" />
+    <circle cx="325" cy="145" r="24" class="icon" />
+    <circle cx="440" cy="145" r="24" class="icon" />
+    <circle cx="330" cy="255" r="24" class="icon" />
+    <circle cx="560" cy="255" r="24" class="icon" />
+    <circle cx="710" cy="255" r="24" class="icon" />
+    <rect x="170" y="420" width="80" height="60" rx="12" class="icon" />
+    <rect x="270" y="420" width="80" height="60" rx="12" class="icon" />
+    <rect x="400" y="420" width="80" height="60" rx="12" class="icon" />
+    <rect x="520" y="420" width="80" height="60" rx="12" class="icon" />
+    <rect x="640" y="420" width="80" height="60" rx="12" class="icon" />
+  </g>
+</svg>

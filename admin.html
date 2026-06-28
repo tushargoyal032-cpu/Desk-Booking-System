@@ -1,0 +1,1330 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'" />
+  <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+  <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin" />
+  <title>Desk Booking - Admin</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.1/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+  <div class="app" style="max-width:1100px">
+    <header class="header">
+      <div>
+        <h1>Admin - Desk Booking</h1>
+        <p class="sub">Review lifecycle events for bookings, check-ins, WFH, and cancellations.</p>
+      </div>
+      <div class="user-panel" style="display: flex; gap: 8px;">
+        <button id="adminLogoutBtn" class="btn danger" type="button" style="display: none;">Logout</button>
+        <button id="backBtn" class="btn secondary" type="button">Back to Booking UI</button>
+      </div>
+    </header>
+
+    <div class="message" id="message" aria-live="polite" style="margin-top: 10px; min-height: 22px; text-align: center;"></div>
+
+    <div id="adminLoginCard" style="max-width: 420px; margin: 60px auto; padding: 24px; border: 1px solid var(--border); border-radius: 14px; background: rgba(0,0,0,0.16); box-shadow: 0 10px 25px rgba(0,0,0,0.3); text-align: center;">
+      <div class="subsection-title" style="font-size: 15px; font-weight: bold; margin-top: 0; margin-bottom: 12px; color: var(--text);">Admin Security Authentication</div>
+      <p style="font-size: 13px; color: var(--muted); line-height: 1.5; margin-bottom: 20px;">Access restricted to authorized personnel. Click below to securely enter administrator credentials and unlock the system configuration console.</p>
+      <div style="display: flex; justify-content: center; gap: 10px;">
+        <button id="adminLoginBtn" class="btn" type="button" style="padding: 9px 24px; font-size: 13px;">Secure Login</button>
+      </div>
+    </div>
+
+    <main id="adminMain" class="main" style="grid-template-columns: 420px 1fr; display: none;">
+      <section class="controls">
+
+        <div class="subsection-title">User onboarding</div>
+        <div class="window" style="margin-bottom:10px">
+          <label class="label" for="userUpload">Upload users from CSV or Excel</label>
+          <input id="userUpload" class="input" type="file" accept=".csv,.xlsx,.xls" />
+          <div class="control actions" style="margin-top:8px">
+            <button id="importUsersBtn" class="btn secondary" type="button">Import users</button>
+            <button id="downloadTemplateBtn" class="btn secondary" type="button">Download template</button>
+            <button id="clearUsersBtn" class="btn secondary" type="button">Clear list</button>
+          </div>
+          <div class="admin-note" style="margin-top:8px">Use columns like userId/id, name/fullName, email. You can open the downloaded template in Excel and save it as .xlsx or .csv. The imported users become available in the booking UI immediately.</div>
+          <div id="userImportSummary" class="summary-panel" style="margin-top:8px"></div>
+        </div>
+
+        <div class="control">
+          <label class="label" for="activeUserSelect">Active booking user</label>
+          <select id="activeUserSelect" class="select"></select>
+        </div>
+
+        <div class="subsection-title">Floor plan upload</div>
+        <div class="window" style="margin-bottom:10px">
+          <label class="label" for="floorPlanUpload">Upload floor plan image</label>
+          <input id="floorPlanUpload" class="input" type="file" accept="image/*" />
+          <div class="control actions" style="margin-top:8px">
+            <button id="submitFloorPlanBtn" class="btn" type="button" disabled>Submit Floor Plan</button>
+            <button id="clearFloorPlanBtn" class="btn secondary" type="button">Clear floor plan</button>
+          </div>
+          <div class="admin-note" style="margin-top:8px">Uploaded floor plans are shown to users during zone selection and booking.</div>
+          <div id="floorPlanStatus" class="summary-panel" style="margin-top:8px"></div>
+        </div>
+
+        <div class="subsection-title">Map Zone Mapping Editor</div>
+        <div class="window" style="margin-bottom:10px">
+          <label class="label" for="editZoneBoundsSelect">Select Zone to Reposition</label>
+          <select id="editZoneBoundsSelect" class="select" style="margin-bottom:8px">
+            <option value="">-- Choose a zone --</option>
+            <option value="zone-a">Zone A</option>
+            <option value="zone-b">Zone B</option>
+            <option value="zone-c">Zone C</option>
+            <option value="zone-d">Zone D</option>
+            <option value="zone-e">Zone E</option>
+          </select>
+          
+          <div id="zoneEditorContainer" style="position:relative; width:100%; height:200px; border:1px solid var(--border); border-radius:10px; overflow:hidden; background:rgba(0,0,0,0.3); display:none; cursor:crosshair;">
+            <img id="zoneEditorImage" style="width:100%; height:100%; object-fit:contain; pointer-events:none; user-select:none;" />
+            <!-- Overlays -->
+            <div id="zoneOverlay-zone-a" style="position:absolute; border:1.5px dashed var(--zone-a); background:rgba(79,140,255,0.15); pointer-events:none; display:none; color:var(--text); font-size:9px; padding:1px 3px; font-weight:bold;">Zone A</div>
+            <div id="zoneOverlay-zone-b" style="position:absolute; border:1.5px dashed var(--zone-b); background:rgba(108,92,231,0.15); pointer-events:none; display:none; color:var(--text); font-size:9px; padding:1px 3px; font-weight:bold;">Zone B</div>
+            <div id="zoneOverlay-zone-c" style="position:absolute; border:1.5px dashed var(--zone-c); background:rgba(0,184,148,0.15); pointer-events:none; display:none; color:var(--text); font-size:9px; padding:1px 3px; font-weight:bold;">Zone C</div>
+            <div id="zoneOverlay-zone-d" style="position:absolute; border:1.5px dashed var(--zone-d); background:rgba(253,203,110,0.15); pointer-events:none; display:none; color:var(--text); font-size:9px; padding:1px 3px; font-weight:bold;">Zone D</div>
+            <div id="zoneOverlay-zone-e" style="position:absolute; border:1.5px dashed var(--zone-e); background:rgba(255,118,117,0.15); pointer-events:none; display:none; color:var(--text); font-size:9px; padding:1px 3px; font-weight:bold;">Zone E</div>
+            <!-- Active draw box -->
+            <div id="zoneEditorDrawingBox" style="position:absolute; border:1.5px solid #ffffff; background:rgba(255,255,255,0.25); pointer-events:none; display:none;"></div>
+          </div>
+          <div class="admin-note" style="margin-top:6px" id="zoneEditorHint">Choose a zone and drag a box on the preview map above to reposition its clickable seat circles.</div>
+        </div>
+
+        <div class="subsection-title">Map Seat Pointer Placement</div>
+        <div class="window" style="margin-bottom:10px">
+          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px; margin-bottom:8px;">
+            <div>
+              <label class="label" for="placerZoneSelect">Choose Zone</label>
+              <select id="placerZoneSelect" class="select"></select>
+            </div>
+            <div>
+              <label class="label" for="placerSeatSelect">Choose Seat to Place</label>
+              <select id="placerSeatSelect" class="select">
+                <option value="">-- Choose a seat --</option>
+              </select>
+            </div>
+          </div>
+
+          <div id="seatPlacerContainer" style="position:relative; width:100%; height:200px; border:1px solid var(--border); border-radius:10px; overflow:hidden; background:rgba(0,0,0,0.3); display:none; cursor:crosshair;">
+            <img id="seatPlacerImage" style="width:100%; height:100%; object-fit:contain; pointer-events:none; user-select:none;" />
+            <div id="seatPlacerPins" style="position:absolute; inset:0; pointer-events:none;"></div>
+          </div>
+          <div class="admin-note" style="margin-top:6px" id="seatPlacerHint">Choose a zone and a seat, then click anywhere on the preview map above to place the seat pin.</div>
+          <div class="control actions" style="margin-top:8px;">
+            <button id="clearSeatPlacementsBtn" class="btn secondary" type="button" style="font-size:11px; padding:4px 8px;">Clear Placements for this Zone</button>
+          </div>
+        </div>
+
+        <div class="subsection-title">Zone & Seat Configuration Manager</div>
+        <div class="window" style="margin-bottom:10px">
+          <div style="margin-bottom:10px; max-height:180px; overflow-y:auto; border-bottom:1px solid var(--border); padding-bottom:10px;">
+            <table style="width:100%; border-collapse:collapse; font-size:12px; text-align:left;">
+              <thead>
+                <tr style="color:var(--muted); border-bottom:1px solid rgba(255,255,255,0.08); font-size:11px;">
+                  <th style="padding:4px 0;">Zone</th>
+                  <th style="padding:4px 0;">Key</th>
+                  <th style="padding:4px 0; text-align:center;">Color</th>
+                  <th style="padding:4px 0; text-align:right;">Seats</th>
+                  <th style="padding:4px 0; text-align:right; width:65px;">Action</th>
+                </tr>
+              </thead>
+              <tbody id="zonesTableBody">
+                <!-- Dynamically populated -->
+              </tbody>
+            </table>
+          </div>
+
+          <div style="border-top:1px solid rgba(255,255,255,0.05); padding-top:8px;">
+            <div style="font-weight:600; font-size:12px; color:var(--text); margin-bottom:8px;" id="zoneFormTitle">Add New / Edit Zone</div>
+            <input type="hidden" id="zoneFormIsEditing" value="false" />
+            
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px; margin-bottom:6px;">
+              <div>
+                <label class="label">Zone Key</label>
+                <input id="zoneKeyInput" class="input" type="text" placeholder="e.g. zone-f" />
+              </div>
+              <div>
+                <label class="label">Zone Label</label>
+                <input id="zoneLabelInput" class="input" type="text" placeholder="e.g. Zone F" />
+              </div>
+            </div>
+
+            <div class="control">
+              <label class="label">Theme Color</label>
+              <select id="zoneColorInput" class="select">
+                <option value="#4f8cff">Blue (Preset)</option>
+                <option value="#6c5ce7">Purple (Preset)</option>
+                <option value="#00b848">Green (Preset)</option>
+                <option value="#fdcb70">Amber (Preset)</option>
+                <option value="#ff7675">Crimson (Preset)</option>
+                <option value="#00cec9">Turquoise (Preset)</option>
+                <option value="#e17055">Orange (Preset)</option>
+                <option value="#fd79a8">Pink (Preset)</option>
+              </select>
+            </div>
+
+            <div class="control">
+              <label class="label">Seat Identifiers (Comma-separated)</label>
+              <textarea id="zoneSeatsInput" class="input" style="height:55px; resize:vertical; font-family:monospace;" placeholder="e.g. F01, F02, F03, F04, F05"></textarea>
+            </div>
+
+            <div class="control actions" style="margin-top:8px; display:flex; gap:6px;">
+              <button id="saveZoneBtn" class="btn" type="button" style="flex:1">Save Zone</button>
+              <button id="cancelZoneEditBtn" class="btn secondary" type="button" style="padding:7px 11px;">Clear</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="subsection-title">Admin controls</div>
+        <div class="window" style="margin-bottom:10px">
+          <div style="color:var(--muted)">Admin access is session-protected and expires automatically.</div>
+          <div class="admin-note">Use the admin credentials configured for this deployment.</div>
+        </div>
+
+        <div class="control">
+          <div id="adminSummary" class="window summary-panel" aria-live="polite"></div>
+        </div>
+
+        <div class="control actions">
+          <button id="refreshBtn" class="btn secondary" type="button">Refresh Logs</button>
+          <button id="exportBtn" class="btn secondary" type="button" style="margin-left:10px">Export (JSON)</button>
+          <button id="exportExcelBtn" class="btn secondary" type="button" style="margin-left:10px">Export to Excel</button>
+          <button id="resetBtn" class="btn secondary" type="button" style="margin-left:10px">Reset Lifecycle</button>
+        </div>
+
+        <div class="subsection-title" style="margin-top:14px">Log filters</div>
+        <div class="window" style="padding:12px 12px">
+          <label class="label" style="margin-top:0">Show only action type</label>
+          <select id="filterType" class="select" style="margin-top:6px">
+            <option value="ALL">All</option>
+            <option value="BOOKED">Booked</option>
+            <option value="CHECKED_IN">Checked-in</option>
+            <option value="WFH">WFH</option>
+            <option value="CANCELED">Canceled</option>
+          </select>
+        </div>
+      </section>
+
+      <section class="map">
+        <div class="subsection-title">All Lifecycle Records</div>
+        <div id="adminRecords" class="admin-records"></div>
+      </section>
+    </main>
+
+    <footer class="footer">Connected to server backend. Uses SQLite for ACID-safe concurrency.</footer>
+
+    <!-- Custom Admin Login Modal Dialog -->
+    <div id="adminLoginModal" style="position: fixed; inset: 0; background: rgba(3, 7, 18, 0.85); backdrop-filter: blur(8px); display: none; align-items: center; justify-content: center; z-index: 1000;">
+      <div style="max-width: 400px; width: 90%; padding: 24px; border: 1px solid var(--border); border-radius: 14px; background: #111a2e; box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
+        <div class="subsection-title" style="font-size: 15px; font-weight: bold; margin-top: 0; margin-bottom: 12px; color: var(--text);">Secure Operator Login</div>
+        
+        <div class="control" style="margin-bottom: 12px;">
+          <label class="label" for="adminUsernameInput">Username</label>
+          <input id="adminUsernameInput" class="input" type="text" placeholder="e.g. admin" value="admin" />
+        </div>
+
+        <div class="control" style="margin-bottom: 16px;">
+          <label class="label" for="adminPasswordInput">Password</label>
+          <input id="adminPasswordInput" class="input" type="password" placeholder="••••••••" style="letter-spacing: 0.15em;" />
+        </div>
+
+        <div class="control actions" style="display: flex; gap: 8px; justify-content: flex-end;">
+          <button id="closeLoginModalBtn" class="btn secondary" type="button">Cancel</button>
+          <button id="submitLoginModalBtn" class="btn" type="button">Login</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (() => {
+      const $ = (id) => document.getElementById(id);
+
+      const LIFECYCLE = {
+        BOOKED: 'BOOKED',
+        CHECKED_IN: 'CHECKED_IN',
+        WFH: 'WFH',
+        CANCELED: 'CANCELED',
+      };
+
+      const ADMIN = { user: 'admin', pass: 'Password-123' };
+      let adminToken = null;
+
+      function setMessage(text, kind) {
+        const el = $('message');
+        if (!el) return;
+        el.textContent = text || '';
+        el.classList.remove('ok', 'err');
+        if (kind) el.classList.add(kind);
+      }
+
+      async function apiCall(path, options = {}) {
+        const url = `${path}`;
+        const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
+        if (adminToken) headers['Authorization'] = `Bearer ${adminToken}`;
+        try {
+          const res = await fetch(url, { ...options, headers });
+          const body = await res.json().catch(() => ({ ok: false, message: 'Invalid response.' }));
+          if (!res.ok) throw new Error(body.message || `HTTP ${res.status}`);
+          return body;
+        } catch (err) {
+          throw new Error(err.message || 'Network error. Is the server running?');
+        }
+      }
+
+      function getRowValue(row, aliases) {
+        if (!row || typeof row !== 'object') return '';
+        const normalized = {};
+        Object.entries(row).forEach(([key, value]) => {
+          normalized[String(key).trim().toLowerCase()] = value;
+        });
+        for (const alias of aliases) {
+          const direct = row?.[alias];
+          if (direct !== undefined && direct !== null && String(direct).trim() !== '') return direct;
+          const normalizedKey = String(alias).trim().toLowerCase();
+          if (normalized[normalizedKey] !== undefined && normalized[normalizedKey] !== null && String(normalized[normalizedKey]).trim() !== '') return normalized[normalizedKey];
+          const spacedKey = String(alias).trim().replace(/\s+/g, ' ');
+          if (row?.[spacedKey] !== undefined && row?.[spacedKey] !== null && String(row?.[spacedKey]).trim() !== '') return row?.[spacedKey];
+        }
+        return '';
+      }
+
+      function normalizeUserRecord(row, index) {
+        const rawId = getRowValue(row, ['userId', 'id', 'employeeId', 'employee id', 'Employee ID', 'user id', 'User ID']);
+        const rawName = getRowValue(row, ['name', 'fullName', 'full name', 'employeeName', 'employee name', 'Employee Name', 'User Name', 'user name']);
+        const rawEmail = getRowValue(row, ['email', 'emailAddress', 'email address', 'Email Address', 'Email']);
+        const id = rawId === '' || rawId === undefined || rawId === null ? String(index + 1) : String(rawId);
+        const name = rawName === '' || rawName === undefined || rawName === null ? `User ${index + 1}` : String(rawName).trim();
+        const email = rawEmail === '' || rawEmail === undefined || rawEmail === null ? '' : String(rawEmail).trim();
+        return { id, name, email };
+      }
+
+      function parseCsv(text) {
+        const rows = [];
+        const lines = text.split(/\r?\n/).filter((line) => line.trim() !== '');
+        if (!lines.length) return rows;
+        const headers = lines[0].split(',').map((h) => h.trim().replace(/^"|"$/g, ''));
+        for (let i = 1; i < lines.length; i += 1) {
+          const values = [];
+          let current = '';
+          let inQuotes = false;
+          for (let j = 0; j < lines[i].length; j += 1) {
+            const ch = lines[i][j];
+            if (ch === '"') {
+              if (inQuotes && lines[i][j + 1] === '"') {
+                current += '"';
+                j += 1;
+              } else {
+                inQuotes = !inQuotes;
+              }
+            } else if (ch === ',' && !inQuotes) {
+              values.push(current.trim());
+              current = '';
+            } else {
+              current += ch;
+            }
+          }
+          values.push(current.trim());
+          const row = {};
+          headers.forEach((header, idx) => { row[header] = values[idx] || ''; });
+          rows.push(row);
+        }
+        return rows;
+      }
+
+      function parseUserImportRows(file) {
+        return new Promise((resolve, reject) => {
+          const name = (file?.name || '').toLowerCase();
+          const reader = new FileReader();
+          reader.onload = () => {
+            try {
+              if (name.endsWith('.csv')) {
+                const rows = parseCsv(String(reader.result || ''));
+                resolve(rows.map(normalizeUserRecord));
+                return;
+              }
+              if (window.XLSX && (name.endsWith('.xlsx') || name.endsWith('.xls'))) {
+                const workbook = window.XLSX.read(reader.result, { type: 'array' });
+                const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                const rows = window.XLSX.utils.sheet_to_json(sheet, { defval: '' });
+                resolve(rows.map((row, index) => normalizeUserRecord(row, index)));
+                return;
+              }
+              reject(new Error('Unsupported file type. Please upload CSV or Excel (.xlsx/.xls).'));
+            } catch (error) { reject(error); }
+          };
+          reader.onerror = () => reject(new Error('Could not read the selected file.'));
+          if (name.endsWith('.csv')) { reader.readAsText(file); }
+          else if (name.endsWith('.xlsx') || name.endsWith('.xls')) { reader.readAsArrayBuffer(file); }
+          else { reject(new Error('Unsupported file type. Please upload CSV or Excel (.xlsx/.xls).')); }
+        });
+      }
+
+      function downloadUserTemplate() {
+        const template = 'userId,name,email\n101,Alice Johnson,alice@example.com\n102,Bob Smith,bob@example.com\n';
+        const blob = new Blob([template], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'deskbook-users-template.csv';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      }
+
+      async function importUsersFromFile() {
+        const input = $('userUpload');
+        const file = input?.files?.[0];
+        if (!file) { setMessage('Please choose a CSV or Excel file first.', 'err'); return; }
+        try {
+          const rows = await parseUserImportRows(file);
+          const normalized = rows.filter((row) => row?.name && String(row.name).trim());
+          if (!normalized.length) { setMessage('No usable user rows were found in the file.', 'err'); return; }
+          await apiCall('/api/admin/import-users', { method: 'POST', body: JSON.stringify({ users: normalized }) });
+          renderUserImportSummary();
+          setMessage(`Imported ${normalized.length} users.`, 'ok');
+        } catch (error) { setMessage(error.message || 'Failed to import users.', 'err'); }
+      }
+
+      async function clearImportedUsers() {
+        try {
+          await apiCall('/api/admin/clear-users', { method: 'POST' });
+          renderUserImportSummary();
+          setMessage('Imported user list cleared.', null);
+        } catch (err) { setMessage(err.message, 'err'); }
+      }
+
+      async function renderUserImportSummary() {
+        const host = $('userImportSummary');
+        if (!host) return;
+        try {
+          const data = await apiCall('/api/users');
+          const users = data.users || [];
+          host.innerHTML = `
+            <div class="summary-grid">
+              <div class="summary-card"><div class="summary-label">Onboarded users</div><div class="summary-value">${users.length}</div></div>
+              <div class="summary-card"><div class="summary-label">Sample</div><div class="summary-value">${users[0]?.name || 'None'}</div></div>
+            </div>
+          `;
+          renderActiveUserSelector(users);
+        } catch (err) { setMessage(err.message, 'err'); }
+      }
+
+      function renderActiveUserSelector(users) {
+        const select = $('activeUserSelect');
+        if (!select) return;
+        select.innerHTML = '';
+        if (!users.length) {
+          const placeholder = document.createElement('option');
+          placeholder.value = '';
+          placeholder.textContent = 'No users imported';
+          select.appendChild(placeholder);
+          return;
+        }
+        users.forEach((user) => {
+          const option = document.createElement('option');
+          option.value = String(user.id);
+          option.textContent = `${user.name || `User ${user.id}`} (${user.id})`;
+          select.appendChild(option);
+        });
+        const activeId = localStorage.getItem('deskbook.activeUser.v1');
+        select.value = activeId || String(users[0]?.id || '');
+        select.onchange = () => {
+          localStorage.setItem('deskbook.activeUser.v1', select.value);
+          setMessage('Active booking user updated.', 'ok');
+        };
+      }
+
+      async function sha256(message) {
+        const msgBuffer = new TextEncoder().encode(message);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        return hashHex;
+      }
+
+      function adminLogin() {
+        $('adminUsernameInput').value = 'admin';
+        $('adminPasswordInput').value = '';
+        $('adminLoginModal').style.display = 'flex';
+        $('adminPasswordInput').focus();
+      }
+
+      async function submitModalLogin() {
+        const user = $('adminUsernameInput').value.trim();
+        const pass = $('adminPasswordInput').value;
+        if (!user || !pass) {
+          setMessage('Username and password are required.', 'err');
+          return;
+        }
+        try {
+          const hashed = await sha256(pass);
+          const result = await apiCall('/api/admin/login', { method: 'POST', body: JSON.stringify({ user, pass: hashed }) });
+          adminToken = result.token;
+          localStorage.setItem('deskbook.adminToken', adminToken);
+          $('adminLoginModal').style.display = 'none';
+          setAdminActionsEnabled(true);
+          setMessage('Admin access granted.', 'ok');
+          await renderAdminRecords();
+          await renderUserImportSummary();
+        } catch (err) {
+          adminToken = null;
+          localStorage.removeItem('deskbook.adminToken');
+          setAdminActionsEnabled(false);
+          setMessage(err.message, 'err');
+        }
+      }
+
+      function adminLogout() {
+        adminToken = null;
+        localStorage.removeItem('deskbook.adminToken');
+        setAdminActionsEnabled(false);
+        setMessage('Logged out.', null);
+      }
+
+      function statusPill(status) {
+        if (status === 'CHECKED_IN') return 'ok';
+        if (status === 'WFH' || status === 'CANCELED') return 'err';
+        return '';
+      }
+
+      window.adminCancelBooking = async function(userId, dateISO) {
+        if (!confirm(`Are you sure you want to cancel the booking for user ${userId} on ${dateISO}?`)) return;
+        try {
+          await apiCall('/api/admin/cancel', {
+            method: 'POST',
+            body: JSON.stringify({ userId, dateISO })
+          });
+          setMessage(`Booking for user ${userId} on ${dateISO} has been cancelled.`, 'ok');
+          await renderAdminRecords();
+        } catch (err) {
+          setMessage(err.message, 'err');
+        }
+      };
+
+      async function renderAdminRecords() {
+        const host = $('adminRecords');
+        if (!host) return;
+        if (!adminToken) {
+          host.innerHTML = '<div class="table-empty">Admin login required.</div>';
+          return;
+        }
+        try {
+          const filterType = $('filterType')?.value || 'ALL';
+          const data = await apiCall('/api/admin/logs');
+          const records = (data.logs || [])
+            .filter((r) => (filterType === 'ALL' ? true : String(r.status || '') === filterType))
+            .sort((a, b) => (a.created_at < b.created_at ? 1 : a.created_at > b.created_at ? -1 : 0));
+
+          renderAdminSummary(records);
+          host.innerHTML = '';
+
+          if (!records.length) {
+            host.innerHTML = '<div class="table-empty">No lifecycle records yet.</div>';
+            return;
+          }
+
+          for (const r of records) {
+            const seatId = r.seat_id || '';
+            const pill = statusPill(r.status || '');
+            const canCancel = (r.status === 'BOOKED' || r.status === 'CHECKED_IN');
+            const cancelBtn = canCancel ? `<button class="btn danger" style="padding: 3px 6px; font-size: 10px; margin-top: 4px; cursor: pointer;" onclick="window.adminCancelBooking('${r.user_id}', '${r.date_iso}')">Cancel</button>` : '';
+            
+            const localTimeStr = r.created_at ? new Date(r.created_at.replace(' ', 'T') + 'Z').toLocaleString() : '';
+            const performer = r.action_by || r.user_id;
+            
+            const row = document.createElement('div');
+            row.className = 'table-row';
+            row.innerHTML = `
+              <div class="table-col">
+                <div><b>User</b>: ${r.user_id}</div>
+                <div class="table-meta">${r.date_iso}</div>
+              </div>
+              <div class="table-col">
+                <div><b>Seat</b>: ${seatId || '-'}</div>
+                <div class="table-meta">By: <b>${performer}</b></div>
+              </div>
+              <div class="table-col" style="display: flex; flex-direction: column; align-items: flex-end; gap: 2px;">
+                <div class="pill ${pill}">${r.status || ''}</div>
+                <div class="table-meta" style="font-size: 11px;">${localTimeStr}</div>
+                ${cancelBtn}
+              </div>
+            `;
+            host.appendChild(row);
+          }
+        } catch (err) {
+          host.innerHTML = '<div class="table-empty">Failed to load records.</div>';
+          setMessage(err.message, 'err');
+        }
+      }
+
+      function renderAdminSummary(records) {
+        const host = $('adminSummary');
+        if (!host) return;
+        const counts = records.reduce((acc, r) => {
+          acc[r.status || 'UNKNOWN'] = (acc[r.status || 'UNKNOWN'] || 0) + 1;
+          return acc;
+        }, {});
+        host.innerHTML = `
+          <div class="summary-grid">
+            <div class="summary-card"><div class="summary-label">Total events</div><div class="summary-value">${records.length}</div></div>
+            <div class="summary-card"><div class="summary-label">Booked</div><div class="summary-value">${counts['BOOKED'] || 0}</div></div>
+            <div class="summary-card"><div class="summary-label">Checked-in</div><div class="summary-value">${counts['CHECKED_IN'] || 0}</div></div>
+            <div class="summary-card"><div class="summary-label">WFH / Canceled</div><div class="summary-value">${(counts['WFH'] || 0) + (counts['CANCELED'] || 0)}</div></div>
+          </div>
+        `;
+      }
+
+      async function exportAdminData() {
+        if (!adminToken) { setMessage('Admin login required.', 'err'); return; }
+        try {
+          const data = await apiCall('/api/admin/logs');
+          const payload = { exportedAt: new Date().toISOString(), records: data.logs || [] };
+          const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `deskbook-lifecycle-${new Date().toISOString().slice(0, 10)}.json`;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          URL.revokeObjectURL(url);
+        } catch (err) { setMessage(err.message, 'err'); }
+      }
+
+      async function exportAdminDataExcel() {
+        if (!adminToken) { setMessage('Admin login required.', 'err'); return; }
+        try {
+          const data = await apiCall('/api/admin/logs');
+          const logs = data.logs || [];
+          if (!logs.length) { setMessage('No logs to export.', 'err'); return; }
+
+          const rows = logs.map((r) => {
+            const localTimeStr = r.created_at ? new Date(r.created_at.replace(' ', 'T') + 'Z').toLocaleString() : '';
+            const performer = r.action_by || r.user_id;
+            return {
+              'Log ID': r.id,
+              'User ID': r.user_id,
+              'Date ISO': r.date_iso,
+              'Seat ID': r.seat_id || '-',
+              'Status / Action': r.status,
+              'Performed By': performer,
+              'Local Timestamp': localTimeStr
+            };
+          });
+
+          const worksheet = XLSX.utils.json_to_sheet(rows);
+          const workbook = XLSX.utils.book_new();
+          XLSX.utils.book_append_sheet(workbook, worksheet, 'Lifecycle Logs');
+          
+          // Auto-adjust column widths
+          const maxLens = {};
+          rows.forEach((row) => {
+            Object.entries(row).forEach(([key, val]) => {
+              const len = Math.max(String(key).length, String(val).length);
+              maxLens[key] = Math.max(maxLens[key] || 0, len);
+            });
+          });
+          worksheet['!cols'] = Object.keys(maxLens).map((key) => ({ wch: maxLens[key] + 3 }));
+
+          XLSX.writeFile(workbook, `deskbook-lifecycle-${new Date().toISOString().slice(0, 10)}.xlsx`);
+          setMessage('Logs exported to Excel successfully.', 'ok');
+        } catch (err) {
+          setMessage(err.message, 'err');
+        }
+      }
+
+      async function resetLifecycleData() {
+        if (!adminToken) { setMessage('Admin login required.', 'err'); return; }
+        if (!confirm('Reset all bookings and lifecycle logs? This will clear the current booking cycle and start fresh.')) return;
+        try {
+          await apiCall('/api/admin/reset', { method: 'POST' });
+          setMessage('Lifecycle reset complete.', 'ok');
+          await renderAdminRecords();
+        } catch (err) { setMessage(err.message, 'err'); }
+      }
+
+      function setAdminActionsEnabled(enabled) {
+        const mainPanel = $('adminMain');
+        const loginCard = $('adminLoginCard');
+        const logoutBtn = $('adminLogoutBtn');
+
+        if (enabled) {
+          if (mainPanel) mainPanel.style.setProperty('display', 'grid', 'important');
+          if (loginCard) loginCard.style.display = 'none';
+          if (logoutBtn) logoutBtn.style.display = 'inline-block';
+        } else {
+          if (mainPanel) mainPanel.style.setProperty('display', 'none', 'important');
+          if (loginCard) loginCard.style.display = 'block';
+          if (logoutBtn) logoutBtn.style.display = 'none';
+        }
+
+        const buttons = [
+          'importUsersBtn', 'clearUsersBtn', 'refreshBtn', 'exportBtn', 
+          'exportExcelBtn', 'clearFloorPlanBtn', 'saveZoneBtn', 
+          'cancelZoneEditBtn', 'clearSeatPlacementsBtn'
+        ];
+        buttons.forEach((id) => { const el = $(id); if (el) el.disabled = !enabled; });
+        
+        const inputs = [
+          'userUpload', 'floorPlanUpload', 'editZoneBoundsSelect',
+          'placerZoneSelect', 'placerSeatSelect', 'zoneKeyInput',
+          'zoneLabelInput', 'zoneColorInput', 'zoneSeatsInput'
+        ];
+        inputs.forEach((id) => { const el = $(id); if (el) el.disabled = !enabled; });
+
+        const submitBtn = $('submitFloorPlanBtn');
+        if (submitBtn) submitBtn.disabled = true;
+
+        renderZonesTable();
+      }
+
+      function getFloorPlanSrc() { return localStorage.getItem('deskbook.floorPlan.v1'); }
+      function setFloorPlanSrc(value) {
+        if (value) localStorage.setItem('deskbook.floorPlan.v1', value);
+        else localStorage.setItem('deskbook.floorPlan.v1', 'none');
+      }
+      function updateFloorPlanStatus() {
+        const status = $('floorPlanStatus');
+        if (!status) return;
+        const src = getFloorPlanSrc();
+        if (src && src !== 'none') {
+          status.textContent = 'Current floor plan is uploaded and available to users.';
+        } else if (src === 'none') {
+          status.textContent = 'Floor plan explicitly cleared. Users will see Grid View by default.';
+        } else {
+          status.textContent = 'No floor plan uploaded yet (default sample map will be shown).';
+        }
+      }
+
+      let stagedFloorPlanFile = null;
+
+      function bindFloorPlanUpload() {
+        const upload = $('floorPlanUpload');
+        const submitBtn = $('submitFloorPlanBtn');
+        const clearBtn = $('clearFloorPlanBtn');
+        
+        if (upload) {
+          upload.addEventListener('change', (event) => {
+            const file = event.target.files?.[0];
+            if (!file) {
+              stagedFloorPlanFile = null;
+              if (submitBtn) submitBtn.disabled = true;
+              return;
+            }
+            if (!file.type.startsWith('image/')) {
+              setMessage('Please upload a valid image file.', 'err');
+              stagedFloorPlanFile = null;
+              if (submitBtn) submitBtn.disabled = true;
+              return;
+            }
+            stagedFloorPlanFile = file;
+            if (submitBtn) submitBtn.disabled = false;
+            setMessage('Floor plan file selected. Click Submit Floor Plan to upload.', null);
+          });
+        }
+        
+        if (submitBtn) {
+          submitBtn.addEventListener('click', () => {
+            if (!stagedFloorPlanFile) return;
+            const reader = new FileReader();
+            reader.onload = () => {
+              setFloorPlanSrc(reader.result);
+              updateFloorPlanStatus();
+              setMessage('Floor plan uploaded and map updated successfully.', 'ok');
+              stagedFloorPlanFile = null;
+              submitBtn.disabled = true;
+              if (upload) upload.value = '';
+            };
+            reader.onerror = () => setMessage('Failed to read the floor plan image.', 'err');
+            reader.readAsDataURL(stagedFloorPlanFile);
+          });
+        }
+        
+        if (clearBtn) {
+          clearBtn.addEventListener('click', () => {
+            setFloorPlanSrc(null);
+            stagedFloorPlanFile = null;
+            if (upload) upload.value = '';
+            if (submitBtn) submitBtn.disabled = true;
+            updateFloorPlanStatus();
+            setMessage('Floor plan cleared (map removed).', 'ok');
+          });
+        }
+      }
+
+      const DEFAULT_ZONE_BOUNDS = {
+        'zone-a': { left: 6.67, top: 10, right: 42.22, bottom: 46.67 },
+        'zone-b': { left: 57.78, top: 10, right: 93.33, bottom: 46.67 },
+        'zone-c': { left: 6.67, top: 56.67, right: 31.11, bottom: 90 },
+        'zone-d': { left: 35.56, top: 56.67, right: 63.33, bottom: 90 },
+        'zone-e': { left: 67.78, top: 56.67, right: 93.33, bottom: 90 },
+      };
+
+      function getZoneBounds() {
+        try {
+          const stored = localStorage.getItem('deskbook.zoneBounds.v1');
+          if (stored) return JSON.parse(stored);
+        } catch (e) {}
+        return { ...DEFAULT_ZONE_BOUNDS };
+      }
+
+      function saveZoneBounds(zoneKey, bounds) {
+        const current = getZoneBounds();
+        current[zoneKey] = bounds;
+        localStorage.setItem('deskbook.zoneBounds.v1', JSON.stringify(current));
+        drawZoneOverlays();
+        setMessage(`Repositioned seats for ${zoneKey.toUpperCase()} successfully.`, 'ok');
+      }
+
+      function drawZoneOverlays() {
+        const bounds = getZoneBounds();
+        const zones = getZonesConfig();
+        const container = $('zoneEditorContainer');
+        if (!container) return;
+
+        // Remove dynamic overlays
+        container.querySelectorAll('.dynamic-zone-overlay').forEach((el) => el.remove());
+
+        // Hide static overlays
+        const DEFAULT_KEYS = ['zone-a', 'zone-b', 'zone-c', 'zone-d', 'zone-e'];
+        DEFAULT_KEYS.forEach((k) => {
+          const el = $(`zoneOverlay-${k}`);
+          if (el) el.style.display = 'none';
+        });
+
+        const activeZone = $('editZoneBoundsSelect')?.value;
+
+        zones.forEach((z) => {
+          const b = bounds[z.key];
+          if (!b) return;
+
+          if (activeZone && activeZone !== z.key) return;
+
+          let overlay = $(`zoneOverlay-${z.key}`);
+          if (!overlay || DEFAULT_KEYS.includes(z.key)) {
+            overlay = document.createElement('div');
+            overlay.id = `zoneOverlay-${z.key}`;
+            overlay.className = 'dynamic-zone-overlay';
+            overlay.style.position = 'absolute';
+            overlay.style.pointerEvents = 'none';
+            overlay.style.fontSize = '9px';
+            overlay.style.padding = '1px 3px';
+            overlay.style.fontWeight = 'bold';
+            overlay.style.color = 'var(--text)';
+            overlay.textContent = z.label;
+            container.appendChild(overlay);
+          }
+
+          const color = z.color || '#4f8cff';
+          const r = parseInt(color.slice(1, 3), 16) || 79;
+          const g = parseInt(color.slice(3, 5), 16) || 140;
+          const bVal = parseInt(color.slice(5, 7), 16) || 255;
+
+          overlay.style.border = `1.5px dashed ${color}`;
+          overlay.style.background = `rgba(${r},${g},${bVal},0.15)`;
+          overlay.style.left = `${b.left}%`;
+          overlay.style.top = `${b.top}%`;
+          overlay.style.width = `${b.right - b.left}%`;
+          overlay.style.height = `${b.bottom - b.top}%`;
+          overlay.style.display = 'block';
+        });
+      }
+
+      function initZoneEditor() {
+        const select = $('editZoneBoundsSelect');
+        const container = $('zoneEditorContainer');
+        const img = $('zoneEditorImage');
+        
+        if (!select || !container || !img) return;
+
+        function refreshEditorState() {
+          const src = getFloorPlanSrc();
+          const hasMap = src && src !== 'none';
+          const mapSrc = hasMap ? src : 'floor-plan-sample-a.svg';
+          
+          img.src = mapSrc;
+          container.style.display = 'block';
+          
+          drawZoneOverlays();
+        }
+
+        select.addEventListener('change', () => {
+          refreshEditorState();
+          const activeZone = select.value;
+          if (activeZone) {
+            setMessage(`Drag a rectangle on the map above to set boundaries for ${activeZone.toUpperCase()}.`, null);
+          } else {
+            setMessage('', null);
+          }
+        });
+
+        refreshEditorState();
+
+        const drawBox = $('zoneEditorDrawingBox');
+        let isDragging = false;
+        let startX = 0, startY = 0;
+
+        container.addEventListener('mousedown', (e) => {
+          if (!adminToken) {
+            setMessage('Admin login required.', 'err');
+            return;
+          }
+          const activeZone = select.value;
+          if (!activeZone) return;
+          
+          isDragging = true;
+          const rect = container.getBoundingClientRect();
+          startX = ((e.clientX - rect.left) / rect.width) * 100;
+          startY = ((e.clientY - rect.top) / rect.height) * 100;
+          
+          drawBox.style.left = `${startX}%`;
+          drawBox.style.top = `${startY}%`;
+          drawBox.style.width = '0%';
+          drawBox.style.height = '0%';
+          drawBox.style.display = 'block';
+        });
+
+        container.addEventListener('mousemove', (e) => {
+          if (!isDragging) return;
+          const rect = container.getBoundingClientRect();
+          const currentX = ((e.clientX - rect.left) / rect.width) * 100;
+          const currentY = ((e.clientY - rect.top) / rect.height) * 100;
+
+          const left = Math.min(startX, currentX);
+          const top = Math.min(startY, currentY);
+          const width = Math.abs(startX - currentX);
+          const height = Math.abs(startY - currentY);
+
+          drawBox.style.left = `${left}%`;
+          drawBox.style.top = `${top}%`;
+          drawBox.style.width = `${width}%`;
+          drawBox.style.height = `${height}%`;
+        });
+
+        window.addEventListener('mouseup', () => {
+          if (!isDragging) return;
+          isDragging = false;
+          drawBox.style.display = 'none';
+
+          if (!adminToken) {
+            setMessage('Admin login required.', 'err');
+            return;
+          }
+
+          const activeZone = select.value;
+          if (!activeZone) return;
+
+          const left = parseFloat(drawBox.style.left);
+          const top = parseFloat(drawBox.style.top);
+          const width = parseFloat(drawBox.style.width);
+          const height = parseFloat(drawBox.style.height);
+
+          if (width < 1.5 || height < 1.5) return;
+
+          const right = left + width;
+          const bottom = top + height;
+
+          saveZoneBounds(activeZone, { left, top, right, bottom });
+          refreshEditorState();
+        });
+        
+        const originalSetSrc = setFloorPlanSrc;
+        setFloorPlanSrc = (val) => {
+          originalSetSrc(val);
+          refreshEditorState();
+        };
+      }
+
+      const DEFAULT_ZONESConfig = [
+        { key: 'zone-a', label: 'Zone A', color: '#4f8cff', seats: Array.from({length: 100}, (_, i) => `A${String(i+1).padStart(3, '0')}`) },
+        { key: 'zone-b', label: 'Zone B', color: '#6c5ce7', seats: Array.from({length: 100}, (_, i) => `B${String(i+1).padStart(3, '0')}`) },
+        { key: 'zone-c', label: 'Zone C', color: '#00b848', seats: Array.from({length: 100}, (_, i) => `C${String(i+1).padStart(3, '0')}`) },
+        { key: 'zone-d', label: 'Zone D', color: '#fdcb70', seats: Array.from({length: 100}, (_, i) => `D${String(i+1).padStart(3, '0')}`) },
+        { key: 'zone-e', label: 'Zone E', color: '#ff7675', seats: Array.from({length: 100}, (_, i) => `E${String(i+1).padStart(3, '0')}`) },
+      ];
+
+      function getZonesConfig() {
+        try {
+          const stored = localStorage.getItem('deskbook.zones.v2');
+          if (stored) return JSON.parse(stored);
+        } catch (e) {}
+        return DEFAULT_ZONESConfig;
+      }
+
+      function saveZonesConfig(zones) {
+        localStorage.setItem('deskbook.zones.v2', JSON.stringify(zones));
+        populateZoneSelect();
+        renderZonesTable();
+        drawZoneOverlays();
+      }
+
+      function populateZoneSelect() {
+        const select = $('editZoneBoundsSelect');
+        if (!select) return;
+        const val = select.value;
+        select.innerHTML = '<option value="">-- Choose a zone --</option>' +
+          getZonesConfig().map((z) => `<option value="${z.key}">${z.label}</option>`).join('');
+        select.value = val;
+      }
+
+      function renderZonesTable() {
+        const body = $('zonesTableBody');
+        if (!body) return;
+        
+        const zones = getZonesConfig();
+        body.innerHTML = '';
+        
+        zones.forEach((z) => {
+          const tr = document.createElement('tr');
+          tr.style.borderBottom = '1px solid rgba(255,255,255,0.04)';
+          tr.innerHTML = `
+            <td style="padding:6px 0; font-weight:600; color:#fff;">${z.label}</td>
+            <td style="padding:6px 0; color:var(--muted);">${z.key}</td>
+            <td style="padding:6px 0; text-align:center;">
+              <span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:${z.color || '#4f8cff'}; vertical-align:middle; box-shadow:0 0 4px ${z.color || '#4f8cff'};"></span>
+            </td>
+            <td style="padding:6px 0; text-align:right; font-weight:bold; color:#fff;">${z.seats.length}</td>
+            <td style="padding:6px 0; text-align:right;">
+              <button class="btn secondary edit-zone-btn" style="padding:2px 6px; font-size:10px; border-radius:4px; margin-right:4px;" data-key="${z.key}">Edit</button>
+              <button class="btn danger delete-zone-btn" style="padding:2px 6px; font-size:10px; border-radius:4px;" data-key="${z.key}">Del</button>
+            </td>
+          `;
+          
+          tr.querySelector('.edit-zone-btn').addEventListener('click', () => {
+            editZone(z.key);
+          });
+          
+          tr.querySelector('.delete-zone-btn').addEventListener('click', () => {
+            deleteZone(z.key);
+          });
+          
+          body.appendChild(tr);
+        });
+      }
+
+      function editZone(key) {
+        if (!adminToken) {
+          setMessage('Admin login required.', 'err');
+          return;
+        }
+        const zones = getZonesConfig();
+        const z = zones.find((item) => item.key === key);
+        if (!z) return;
+        
+        $('zoneFormTitle').textContent = `Edit Zone: ${z.label}`;
+        $('zoneFormIsEditing').value = 'true';
+        $('zoneKeyInput').value = z.key;
+        $('zoneKeyInput').disabled = true;
+        $('zoneLabelInput').value = z.label;
+        $('zoneColorInput').value = z.color || '#4f8cff';
+        $('zoneSeatsInput').value = z.seats.join(', ');
+      }
+
+      function clearZoneForm() {
+        $('zoneFormTitle').textContent = 'Add New / Edit Zone';
+        $('zoneFormIsEditing').value = 'false';
+        $('zoneKeyInput').value = '';
+        $('zoneKeyInput').disabled = false;
+        $('zoneLabelInput').value = '';
+        $('zoneColorInput').value = '#4f8cff';
+        $('zoneSeatsInput').value = '';
+      }
+
+      function deleteZone(key) {
+        if (!adminToken) {
+          setMessage('Admin login required.', 'err');
+          return;
+        }
+        const zones = getZonesConfig();
+        if (zones.length <= 1) {
+          setMessage('At least one zone must exist.', 'err');
+          return;
+        }
+        if (!confirm(`Are you sure you want to delete zone "${key}"? All its seat configurations will be removed.`)) return;
+        
+        const filtered = zones.filter((z) => z.key !== key);
+        saveZonesConfig(filtered);
+        
+        try {
+          const storedBounds = localStorage.getItem('deskbook.zoneBounds.v1');
+          if (storedBounds) {
+            const bounds = JSON.parse(storedBounds);
+            delete bounds[key];
+            localStorage.setItem('deskbook.zoneBounds.v1', JSON.stringify(bounds));
+          }
+        } catch (e) {}
+        
+        setMessage(`Zone "${key}" deleted successfully.`, 'ok');
+      }
+
+      function initZoneManager() {
+        populateZoneSelect();
+        renderZonesTable();
+        
+        $('cancelZoneEditBtn').addEventListener('click', clearZoneForm);
+        
+        $('saveZoneBtn').addEventListener('click', () => {
+          if (!adminToken) {
+            setMessage('Admin login required.', 'err');
+            return;
+          }
+          const keyInput = $('zoneKeyInput');
+          const key = keyInput.value.trim().toLowerCase().replace(/[^a-z0-9\-]/g, '');
+          const label = $('zoneLabelInput').value.trim();
+          const color = $('zoneColorInput').value;
+          const seatsText = $('zoneSeatsInput').value.trim();
+          const isEditing = $('zoneFormIsEditing').value === 'true';
+
+          if (!key || !label) {
+            setMessage('Zone Key and Zone Label are required.', 'err');
+            return;
+          }
+          
+          if (!seatsText) {
+            setMessage('At least one seat identifier is required.', 'err');
+            return;
+          }
+          
+          const seats = seatsText.split(',')
+            .map((s) => s.trim())
+            .filter((s) => s.length > 0);
+
+          if (seats.length === 0) {
+            setMessage('At least one valid seat identifier is required.', 'err');
+            return;
+          }
+
+          const zones = getZonesConfig();
+          
+          if (isEditing) {
+            const z = zones.find((item) => item.key === key);
+            if (z) {
+              z.label = label;
+              z.color = color;
+              z.seats = seats;
+            }
+            setMessage(`Zone "${label}" updated successfully.`, 'ok');
+          } else {
+            if (zones.some((z) => z.key === key)) {
+              setMessage(`Zone Key "${key}" already exists.`, 'err');
+              return;
+            }
+            zones.push({ key, label, color, seats });
+            setMessage(`New zone "${label}" added successfully.`, 'ok');
+          }
+          
+          saveZonesConfig(zones);
+          clearZoneForm();
+        });
+      }
+
+      function initSeatPlacer() {
+        const zoneSelect = $('placerZoneSelect');
+        const seatSelect = $('placerSeatSelect');
+        const container = $('seatPlacerContainer');
+        const img = $('seatPlacerImage');
+        const pins = $('seatPlacerPins');
+        const clearBtn = $('clearSeatPlacementsBtn');
+
+        if (!zoneSelect || !seatSelect || !container || !img || !pins || !clearBtn) return;
+
+        function getSeatCoords() {
+          try {
+            const stored = localStorage.getItem('deskbook.seatCoords.v1');
+            if (stored) return JSON.parse(stored);
+          } catch (e) {}
+          return {};
+        }
+
+        function saveSeatCoords(coords) {
+          localStorage.setItem('deskbook.seatCoords.v1', JSON.stringify(coords));
+        }
+
+        function populateZoneDropdown() {
+          const val = zoneSelect.value;
+          zoneSelect.innerHTML = '<option value="">-- Choose a zone --</option>' +
+            getZonesConfig().map((z) => `<option value="${z.key}">${z.label}</option>`).join('');
+          zoneSelect.value = val;
+        }
+
+        function updateSeatsDropdown() {
+          const zoneKey = zoneSelect.value;
+          if (!zoneKey) {
+            seatSelect.innerHTML = '<option value="">-- Choose a seat --</option>';
+            container.style.display = 'none';
+            return;
+          }
+
+          const zones = getZonesConfig();
+          const zone = zones.find((z) => z.key === zoneKey);
+          if (!zone) return;
+
+          seatSelect.innerHTML = '<option value="">-- Choose a seat --</option>' +
+            zone.seats.map((s) => `<option value="${s}">${s}</option>`).join('');
+
+          const src = getFloorPlanSrc();
+          img.src = src && src !== 'none' ? src : 'floor-plan-sample-a.svg';
+          container.style.display = 'block';
+          drawPins();
+        }
+
+        function drawPins() {
+          pins.innerHTML = '';
+          const zoneKey = zoneSelect.value;
+          if (!zoneKey) return;
+
+          const zones = getZonesConfig();
+          const zone = zones.find((z) => z.key === zoneKey);
+          if (!zone) return;
+
+          const coords = getSeatCoords();
+          const activeSeat = seatSelect.value;
+
+          zone.seats.forEach((seatId) => {
+            const c = coords[seatId];
+            if (!c) return;
+
+            const pin = document.createElement('div');
+            pin.style.position = 'absolute';
+            pin.style.width = '12px';
+            pin.style.height = '12px';
+            pin.style.borderRadius = '50%';
+            pin.style.border = '1.5px solid #ffffff';
+            pin.style.background = zone.color || '#4f8cff';
+            pin.style.left = `${c.left}%`;
+            pin.style.top = `${c.top}%`;
+            pin.style.transform = 'translate(-50%, -50%)';
+            pin.style.boxShadow = activeSeat === seatId ? `0 0 12px #ffffff` : `0 0 5px ${zone.color || '#4f8cff'}`;
+            if (activeSeat === seatId) {
+              pin.style.border = '2px solid #ff4d4d';
+              pin.style.zIndex = '10';
+            }
+
+            pins.appendChild(pin);
+          });
+        }
+
+        zoneSelect.addEventListener('change', updateSeatsDropdown);
+        seatSelect.addEventListener('change', drawPins);
+
+        container.addEventListener('click', (e) => {
+          if (!adminToken) {
+            setMessage('Admin login required.', 'err');
+            return;
+          }
+          const seatId = seatSelect.value;
+          if (!seatId) {
+            setMessage('Please select a seat from the dropdown first before clicking to place.', 'err');
+            return;
+          }
+
+          const rect = container.getBoundingClientRect();
+          const left = ((e.clientX - rect.left) / rect.width) * 100;
+          const top = ((e.clientY - rect.top) / rect.height) * 100;
+
+          const coords = getSeatCoords();
+          coords[seatId] = { left: parseFloat(left.toFixed(2)), top: parseFloat(top.toFixed(2)) };
+          saveSeatCoords(coords);
+
+          setMessage(`Positioned seat ${seatId} successfully.`, 'ok');
+          drawPins();
+
+          // Auto-advance to the next seat in the select dropdown list!
+          const nextIndex = seatSelect.selectedIndex + 1;
+          if (nextIndex < seatSelect.options.length) {
+            seatSelect.selectedIndex = nextIndex;
+            drawPins();
+          }
+        });
+
+        clearBtn.addEventListener('click', () => {
+          if (!adminToken) {
+            setMessage('Admin login required.', 'err');
+            return;
+          }
+          const zoneKey = zoneSelect.value;
+          if (!zoneKey) return;
+          if (!confirm(`Clear all custom seat placements for zone "${zoneKey.toUpperCase()}"?`)) return;
+
+          const zones = getZonesConfig();
+          const zone = zones.find((z) => z.key === zoneKey);
+          if (!zone) return;
+
+          const coords = getSeatCoords();
+          zone.seats.forEach((seatId) => {
+            delete coords[seatId];
+          });
+          saveSeatCoords(coords);
+
+          setMessage(`Cleared placements for ${zoneKey.toUpperCase()}.`, 'ok');
+          drawPins();
+        });
+
+        // Trigger updates when zones config updates
+        window.addEventListener('storage', (e) => {
+          if (e.key === 'deskbook.zones.v2') {
+            populateZoneDropdown();
+            updateSeatsDropdown();
+          }
+        });
+
+        populateZoneDropdown();
+      }
+
+      $('backBtn').addEventListener('click', () => { window.location.href = 'index.html'; });
+      bindFloorPlanUpload();
+      updateFloorPlanStatus();
+      initZoneEditor();
+      initZoneManager();
+      initSeatPlacer();
+
+      $('adminLoginBtn').addEventListener('click', adminLogin);
+      $('closeLoginModalBtn').addEventListener('click', () => {
+        $('adminLoginModal').style.display = 'none';
+        setMessage('Login cancelled.', null);
+      });
+      $('submitLoginModalBtn').addEventListener('click', submitModalLogin);
+      $('adminPasswordInput').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          submitModalLogin();
+        }
+      });
+      $('adminLogoutBtn').addEventListener('click', () => { adminLogout(); renderAdminRecords(); });
+      $('refreshBtn').addEventListener('click', () => renderAdminRecords());
+      $('exportBtn').addEventListener('click', exportAdminData);
+      $('exportExcelBtn').addEventListener('click', exportAdminDataExcel);
+      $('resetBtn').addEventListener('click', resetLifecycleData);
+      $('filterType').addEventListener('change', () => renderAdminRecords());
+      $('importUsersBtn').addEventListener('click', () => importUsersFromFile());
+      $('downloadTemplateBtn').addEventListener('click', () => downloadUserTemplate());
+      $('clearUsersBtn').addEventListener('click', () => clearImportedUsers());
+
+      async function initAdmin() {
+        const storedToken = localStorage.getItem('deskbook.adminToken');
+        if (storedToken) {
+          adminToken = storedToken;
+          setAdminActionsEnabled(true);
+          try {
+            await renderAdminRecords();
+            await renderUserImportSummary();
+          } catch (err) {
+            adminLogout();
+            await renderAdminRecords();
+            await renderUserImportSummary();
+          }
+        } else {
+          setAdminActionsEnabled(false);
+          await renderAdminRecords();
+          await renderUserImportSummary();
+        }
+      }
+      initAdmin();
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 600" width="900" height="600">
+  <defs>
+    <linearGradient id="bg2" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#141c2d" />
+      <stop offset="100%" stop-color="#091020" />
+    </linearGradient>
+    <style>
+      .zone { stroke:#fff; stroke-width:4; fill-opacity:.18; }
+      .label { font:700 26px Verdana, sans-serif; fill:#f8fbff; }
+      .zone-a { fill:#4f8cff; }
+      .zone-b { fill:#6c5ce7; }
+      .zone-c { fill:#00b894; }
+      .zone-d { fill:#fdcb6e; }
+      .zone-e { fill:#ff7675; }
+      .desk { fill:rgba(255,255,255,.08); stroke:rgba(255,255,255,.2); stroke-width:1; }
+    </style>
+  </defs>
+  <rect width="900" height="600" fill="url(#bg2)" rx="24" />
+  <rect x="70" y="70" width="760" height="460" rx="22" fill="rgba(255,255,255,.02)" stroke="rgba(255,255,255,.14)" />
+  <rect x="90" y="90" width="320" height="200" class="zone zone-a" rx="18" />
+  <text x="250" y="160" text-anchor="middle" class="label">Zone A</text>
+  <g>
+    <rect x="110" y="190" width="60" height="32" class="desk" rx="8" />
+    <rect x="210" y="190" width="60" height="32" class="desk" rx="8" />
+    <rect x="310" y="190" width="60" height="32" class="desk" rx="8" />
+    <rect x="110" y="240" width="60" height="32" class="desk" rx="8" />
+    <rect x="210" y="240" width="60" height="32" class="desk" rx="8" />
+    <rect x="310" y="240" width="60" height="32" class="desk" rx="8" />
+  </g>
+  <rect x="490" y="90" width="260" height="200" class="zone zone-b" rx="18" />
+  <text x="620" y="160" text-anchor="middle" class="label">Zone B</text>
+  <g>
+    <rect x="515" y="190" width="58" height="34" class="desk" rx="8" />
+    <rect x="590" y="190" width="58" height="34" class="desk" rx="8" />
+    <rect x="665" y="190" width="58" height="34" class="desk" rx="8" />
+    <rect x="515" y="240" width="58" height="34" class="desk" rx="8" />
+    <rect x="590" y="240" width="58" height="34" class="desk" rx="8" />
+    <rect x="665" y="240" width="58" height="34" class="desk" rx="8" />
+  </g>
+  <rect x="90" y="310" width="190" height="220" class="zone zone-c" rx="18" />
+  <text x="185" y="380" text-anchor="middle" class="label">Zone C</text>
+  <rect x="320" y="310" width="180" height="220" class="zone zone-d" rx="18" />
+  <text x="410" y="380" text-anchor="middle" class="label">Zone D</text>
+  <rect x="540" y="310" width="260" height="220" class="zone zone-e" rx="18" />
+  <text x="670" y="380" text-anchor="middle" class="label">Zone E</text>
+</svg>
