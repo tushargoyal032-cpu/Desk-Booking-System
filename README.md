@@ -184,4 +184,4 @@ With the SQLite `IMMEDIATE` transaction, you will see:
 
 ## License
 
-MIT
+Tushar Goyal
